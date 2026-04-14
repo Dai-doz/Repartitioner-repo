@@ -1,0 +1,32 @@
+
+set_progress(0.00);
+	ui_print("------------------------------------------------------------------------------------------ ");
+	ui_print("	       Universal Repartitioner for Exynos 850 chipset");
+	ui_print("	Taken from @Astrako Repartitioner and Rewrite By Dai_Doz, all thanks to him");
+	ui_print("               Super=12000MB Tip-You can config size in repartition.sh                                    ");
+        ui_print("                 PRISMSIZE=10,OPTICSSIZE=10,CACHESIZE=6,OMRSIZE=3")
+        ui_print("------------------------------------------------------------------------------------------ ");
+	
+set_progress(0.5);
+	ui_print("Warning!Untest program,I wont responsible for your scambrick");
+	ui_print("	Repartition...");
+		package_extract_file("repartition.sh", "/tmp/repartition.sh");
+		set_perm(0, 0, 0777, "/tmp/repartition.sh");
+		run_program("/tmp/repartition.sh");
+		ifelse(is_mounted("/system"), unmount("/system"));
+		ifelse(is_mounted("/vendor"), unmount("/vendor"));
+		ifelse(is_mounted("/product"), unmount("/cache"));
+		ifelse(is_mounted("/odm"), unmount("/odm"));
+		
+
+set_progress(0.9);
+	ui_print(" ");
+	ui_print("   Finished  ");
+	ui_print(" ");
+	ui_print("Now reboot to recovery, Then flash the rom, format and wipe cache and that's it.");
+	ui_print("");
+	ui_print(" ");
+	
+set_progress(1.0);
+
+
