@@ -13,6 +13,6 @@
 # limitations under the License.
 #
 # Originally taken from universal repartitioner for the 7870 and @Astrako, V1.0, thanks to him
-# Written by @Dai_doz
+#  Rewritten by @Dai_doz
 # Modified for Universal 850
-#IF YOUR DEVICE BRICK WILL NOT RESPONSIBLE 
+# IF YOUR DEVICE BRICK WILL NOT RESPONSIBLE 
