@@ -1,0 +1,112 @@
+#!/sbin/sh
+
+FD=$2
+
+ui_print() {
+  echo -n -e "ui_print $1\n" > /proc/self/fd/$FD
+  echo -n -e "ui_print\n" > /proc/self/fd/$FD
+}
+
+set_perm() {
+  chown $1:$2 $4
+  chmod $3 $4
+}
+
+ui_print "***************************************"
+ui_print "* Repartitioner for Exynos 7884 Series "
+ui_print "*     Optimazed Rewrite by Dai_doz "
+ui_print "***************************************"
+
+device=$(getprop ro.product.device)
+if [ "$device" != "a10" ] && [ "$device" != "a20" ] && [ "$device" != "a20e" ] && [ "$device" != "a30" ] && [ "$device" != "a30s" ] && [ "$device" != "a40" ]; then
+    ui_print "This device is not supported."
+	exit 1
+fi
+
+if [ -z "${3##*/sdcard/*}" ] || [ -z "${3##*/data/media/0/*}" ]; then
+    ui_print "* Do not flash this zip file from internal storage!"."
+    exit 1
+fi
+
+ui_print "* I am not responsible for bricked devices, dead SD cards..."
+ui_print "* Starting..."
+
+# Partition sizes in MB
+VENDORSIZE=680
+SYSTEMSIZE=10000
+PRODUCTSIZE=400
+
+# Definitions
+SGDISK=$(which sgdisk)
+DISK=/dev/block/mmcblk0
+if [ -z "$SGDISK" ]; then
+    exit 1
+fi
+CODE=$($SGDISK --print $DISK | grep userdata | awk '{printf $6}')
+
+# Number
+USERDATA=$($SGDISK --print $DISK | grep userdata | awk '{printf $1}')
+VENDOR=$($SGDISK --print $DISK | grep vendor | awk '{printf $1}')
+SYSTEM=$($SGDISK --print $DISK | grep system | awk '{printf $1}')
+PRODUCT=$($SGDISK --print $DISK | grep product | awk '{printf $1}')
+
+if cat /proc/mounts | grep -q "/vendor"; then
+    umount /vendor >/dev/null 2>&1 || ui_print "* Failed to unmount vendor!"
+fi
+
+if cat /proc/mounts | grep -q "/system"; then
+    umount /vendor >/dev/null 2>&1 || ui_print "* Failed to unmount vendor!"
+fi
+
+if cat /proc/mounts | grep -q "/product"; then
+    umount /vendor >/dev/null 2>&1 || ui_print "* Failed to unmount vendor!"
+fi
+
+if cat /proc/mounts | grep -q "/data"; then
+    umount /data >/dev/null 2>&1 || ui_print "* Failed to unmount data!"
+fi
+
+umount -a -t ext4 >/dev/null 2>&1
+umount -a -t f2fs >/dev/null 2>&1
+
+sleep 1
+
+del_fail() {
+    ui_print "* Failed to delete some partitions."
+	ui_print "* Make sure you are not using them."
+	exit 1
+}
+
+# Delete vendor and userdata
+ui_print "* Deleting partitions..."
+$SGDISK --delete=${USERDATA} $DISK || del_fail
+$SGDISK --delete=${VENDOR} $DISK || del_fail
+$SGDISK --delete=${SYSTEM} $DISK || del_fail
+$SGDISK --delete=${PRODUCT} $DISK || del_fail
+
+sleep 1
+
+# Create new ones
+ui_print "* Creating vendor... ${VENDORSIZE}MB"
+$SGDISK --new=0:0:+${VENDORSIZE}M --typecode=0:$CODE --change-name=0:vendor $DISK
+ui_print "* Creating system... ${SYSTEMSIZE}MB"
+$SGDISK --new=0:0:+${SYSTEMSIZE}M --typecode=0:$CODE --change-name=0:system $DISK
+ui_print "* Creating product... ${PRODUCTSIZE}MB"
+$SGDISK --new=0:0:+${PRODUCTSIZE}M --typecode=0:$CODE --change-name=0:product $DISK
+ui_print "* Creating userdata..."
+$SGDISK --new=0:0:0 --typecode=0:$CODE --change-name=0:userdata $DISK
+
+
+sleep 1
+
+# Make working ext4 filesystem from them
+ui_print "* Formatting partitions as ext4..."
+mke2fs -F -t ext4 /dev/block/mmcblk0p${VENDOR}
+mke2fs -F -t ext4 /dev/block/mmcblk0p${SYSTEM}
+mke2fs -F -t ext4 /dev/block/mmcblk0p${PRODUCT}
+mke2fs -F -t ext4 /dev/block/mmcblk0p${USERDATA}
+
+ui_print "* Done!"
+ui_print "* Try use OrangeFox Recovery Twrp wont work"
+ui_print "* If you can't mount partitions, just format them as ext4."
+
